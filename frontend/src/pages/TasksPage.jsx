@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TaskCard } from '../components/TaskCard';
 import { CreateTaskForm } from '../components/CreateTaskForm';
+import { EditTaskModal } from '../components/EditTaskModal';
 import tasksService from '../services/tasks.service';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,6 +10,7 @@ export function TasksPage() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editingTask, setEditingTask] = useState(null);
 
   // Carga inicial de tareas del usuario autenticado desde el backend
   useEffect(() => {
@@ -38,9 +40,13 @@ export function TasksPage() {
       const updatedTask = await tasksService.update(id, {
         completed: !taskToToggle.completed,
       });
+
       setTasks((prevTasks) =>
-        prevTasks.map((task) => (task.id === id ? updatedTask : task))
+        prevTasks.map((task) =>
+          task.id === id ? updatedTask : task
+        )
       );
+
       setError(null);
     } catch (err) {
       console.error('Error al actualizar tarea:', err);
@@ -52,7 +58,9 @@ export function TasksPage() {
   const handleDelete = async (id) => {
     try {
       await tasksService.delete(id);
-      setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id));
+      setTasks((prevTasks) =>
+        prevTasks.filter((task) => task.id !== id)
+      );
       setError(null);
     } catch (err) {
       console.error('Error al eliminar tarea:', err);
@@ -65,18 +73,39 @@ export function TasksPage() {
     setTasks((prevTasks) => [newTask, ...prevTasks]);
   };
 
+  // Actualizar una tarea después de editarla
+  const handleTaskUpdated = (updatedTask) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === updatedTask.id ? updatedTask : task
+      )
+    );
+
+    setEditingTask(null);
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-white p-8">
       <div className="max-w-2xl mx-auto">
+
         {/* Encabezado con información del usuario y botón de cerrar sesión */}
         <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-800">
           <div>
-            <h1 className="text-3xl font-bold text-indigo-400">Mis Tareas</h1>
+            <h1 className="text-3xl font-bold text-indigo-400">
+              Mis Tareas
+            </h1>
+
             <p className="text-slate-400 text-sm mt-1">
-              Bienvenido, <span className="text-slate-200 font-medium">{user?.name}</span>{' '}
-              <span className="text-slate-500 text-xs">({user?.email})</span>
+              Bienvenido,{' '}
+              <span className="text-slate-200 font-medium">
+                {user?.name}
+              </span>{' '}
+              <span className="text-slate-500 text-xs">
+                ({user?.email})
+              </span>
             </p>
           </div>
+
           <button
             onClick={logout}
             className="self-start sm:self-auto px-4 py-2 text-xs font-medium text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl transition cursor-pointer"
@@ -93,7 +122,9 @@ export function TasksPage() {
         {/* Indicador de carga */}
         {loading && (
           <div className="text-center py-10 text-slate-400 animate-pulse">
-            <p className="text-lg">Cargando tareas desde la base de datos...</p>
+            <p className="text-lg">
+              Cargando tareas desde la base de datos...
+            </p>
           </div>
         )}
 
@@ -105,17 +136,19 @@ export function TasksPage() {
           </div>
         )}
 
-        {/* Listado de tareas o aviso de lista vacía */}
+        {/* Listado de tareas */}
         {!loading && !error && (
           <div className="space-y-4">
             {tasks.map((task) => (
               <TaskCard
                 key={task.id}
+                task={task}
                 title={task.title}
                 description={task.description}
                 completed={task.completed}
                 onToggle={() => handleToggle(task.id)}
                 onDelete={() => handleDelete(task.id)}
+                onEdit={() => setEditingTask(task)}
               />
             ))}
 
@@ -126,9 +159,16 @@ export function TasksPage() {
             )}
           </div>
         )}
+
+        {/* Modal de edición */}
+        {editingTask && (
+          <EditTaskModal
+            task={editingTask}
+            onTaskUpdated={handleTaskUpdated}
+            onClose={() => setEditingTask(null)}
+          />
+        )}
       </div>
     </div>
   );
 }
-
-export default TasksPage;

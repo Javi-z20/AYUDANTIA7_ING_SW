@@ -8,3 +8,4 @@ postman
 dist
 dist-ssr
 *.local
+.env.example
